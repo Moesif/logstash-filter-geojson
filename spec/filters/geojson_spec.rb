@@ -52,4 +52,17 @@ describe LogStash::Filters::GeoJSON do
     end
   end
 
+  describe "Convert GeoJSON Polygon to ElasticSearch geo_point" do
+    geometry = {"type" => "Polygon", "coordinates" => [
+      [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ]
+      ]}
+    sample("geometry" => geometry) do
+      expect(subject).to include("point")
+      geoPoint = subject['point']
+      expect(geoPoint).to include("lat")
+      expect(geoPoint).to include("lon")
+      expect(geoPoint['lat']).to eq(0.5)
+      expect(geoPoint['lon']).to eq(100.5)
+    end
+  end
 end

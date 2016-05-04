@@ -25,9 +25,6 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       sumLat += coord[GEOJSON_LAT_INDEX]
       sumLon += coord[GEOGJSON_LON_INDEX]
     end
-    puts count
-    puts sumLat
-    puts sumLon
     center = {
       "lat" => sumLat / count,
       "lon" => sumLon / count
@@ -45,6 +42,10 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       }
     elsif "LineString".casecmp(geometry["type"]) == 0
       point = getCenter(geometry["coordinates"])
+    elsif "Polygon".casecmp(geometry["type"]) == 0
+      exteriorRing = geometry["coordinates"][0]
+      #remove last point because it just closes shape and skews center
+      point = getCenter(exteriorRing[0...-1])
     end
     return point
   end
