@@ -1,5 +1,5 @@
 # logstash-filter-geojson
-[GeoJSON](http://geojson.org/) provides an elogent solution for encoding domain agnostic geographic data. 
+[GeoJSON](http://geojson.org/) provides an elegant solution for encoding domain agnostic geographic data. 
 However, when inserting documents into ElasticSearch, the GeoJSON format is not the best fit. There are two main problems
 * The GeoJSON format nests domain specific attributes under the `properties` element. ElasticSearch/kibana work work best with flatter data strutures
 * The ElasticSearch geo_point is not compatiable with GeoJSON's point type
