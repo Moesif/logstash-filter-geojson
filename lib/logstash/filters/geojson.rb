@@ -13,12 +13,28 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
   end # def register
 
   public
+  def convertToGeopoint(geometry)
+    point = nil
+    if geometry["type"] == "Point"
+      point = {
+        "lat" => geometry["coordinates"][1], 
+        "lon" => geometry["coordinates"][0]
+      }
+    end
+    return point
+  end
+
+  public
   def filter(event)
 
     if event["properties"]
       event["properties"].each do |k, v|
         event[k] = v 
       end
+    end
+
+    if event["geometry"]
+      event["point"] = convertToGeopoint(event["geometry"])
     end
     
     # filter_matched should go in the last line of our successful code
