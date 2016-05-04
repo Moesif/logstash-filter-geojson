@@ -2,26 +2,10 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter will replace the contents of the default 
-# message field with whatever you specify in the configuration.
-#
-# It is only intended to be used as an example.
+# Filter to dig out GeoJSON fields for easier usage in ElasticStack.
 class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
-  # Setting the config_name here is required. This is how you
-  # configure this filter from your Logstash config.
-  #
-  # filter {
-  #   example {
-  #     message => "My message..."
-  #   }
-  # }
-  #
   config_name "geojson"
-  
-  # Replace the message with this value.
-  config :message, :validate => :string, :default => "Hello World!"
-  
 
   public
   def register
@@ -31,13 +15,13 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
   public
   def filter(event)
 
-    if @message
-      # Replace the event message with our message as configured in the
-      # config file.
-      event["message"] = @message
+    if event["properties"]
+      event["properties"].each do |k, v|
+        event[k] = v 
+      end
     end
-
+    
     # filter_matched should go in the last line of our successful code
     filter_matched(event)
   end # def filter
-end # class LogStash::Filters::Example
+end # class LogStash::Filters::GeoJSON
