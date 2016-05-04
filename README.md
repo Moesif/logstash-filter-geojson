@@ -36,4 +36,18 @@ Gets converted to
 }
 ```
 
+## Build instructions
+
+### Set up env
+* Set up [development envirnoment](https://github.com/EagerELK/logstash-development-environment)
+* clone code base `git clone git@github.com:nreese/logstash-filter-geojson.git`
+* `cd logstash-filter-geojson`
+* `bundle install`
+ 
+### Run tests
+* `bundle exec rspec`
+* 
+### Build plugin
+* `gem build logstash-filter-geojson.gemspec`
+
 
