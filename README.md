@@ -46,7 +46,7 @@ Gets converted to
  
 ### Run tests
 * `bundle exec rspec`
-* 
+
 ### Build plugin
 * `gem build logstash-filter-geojson.gemspec`
 
