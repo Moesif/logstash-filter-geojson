@@ -11,6 +11,16 @@ This Logstash filter transforms GeoJSON into a structure more suitable for the E
 * Converting all non-point GeoJSON geometries into a center point to support Geohash aggregations.
 
 ## Example
+Use this example logstash configuration...
+```
+filter {
+  geojson {  
+  }
+}
+```
+
+...to convert GeoJSON documents like this..
+
 ```
 {
   "type": "Feature",
@@ -24,7 +34,7 @@ This Logstash filter transforms GeoJSON into a structure more suitable for the E
 }
 ```
 
-Gets converted to 
+...into documents like this...
 
 ```
 {
@@ -36,4 +46,19 @@ Gets converted to
 }
 ```
 
+## Build instructions
 
+### Set up env
+* Set up [development envirnoment](https://github.com/EagerELK/logstash-development-environment)
+* clone code base `git clone git@github.com:nreese/logstash-filter-geojson.git`
+* `cd logstash-filter-geojson`
+* `bundle install`
+ 
+### Run tests
+* `bundle exec rspec`
+
+### Build plugin
+* `gem build logstash-filter-geojson.gemspec`
+
+### Install plugin
+* `$LOGSTASH_HOME/bin/plugin install logstash-filter-geojson-0.1.0.gem`
