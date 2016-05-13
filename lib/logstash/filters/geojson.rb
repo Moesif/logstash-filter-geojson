@@ -9,6 +9,9 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   config_name "geojson"
 
+  config :properties_dig_level, :validate => :number, :default => 1
+
+
   public
   def register
     # Add instance variables 
@@ -51,11 +54,25 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
   end
 
   public
-  def filter(event)
+  def dig(k, v, level)
+    @logger.info("digging: key: " + k + ", value: " + v.to_s + ", type: " + v.class.to_s)
+    if (level > 0) && (v.is_a? Hash)
+      nested = {}
+      v.each do |nestedKey, nestedVal|
+        nested = nested.merge(dig(nestedKey, nestedVal, level - 1))
+      end
+      return nested
+    else
+      return {k => v}
+    end
+  end
 
-    if event["properties"]
-      event["properties"].each do |k, v|
-        event[k] = v 
+  public
+  def filter(event)
+    if event["properties"] && properties_dig_level != 0
+      props = dig("properties", event["properties"], properties_dig_level)
+      props.each do |k, v|
+        event[k] = v
       end
     end
 
