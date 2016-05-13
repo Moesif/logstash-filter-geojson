@@ -163,6 +163,32 @@ describe LogStash::Filters::GeoJSON do
         expect(subject['nested2StringProp']).to eq("really deep")
       end
     end
-
   end 
+
+  describe "Test dig properties name collisions" do
+    props = {
+      "collisionKey" => "level 1", 
+      "objProp" => {
+        "collisionKey" => "level 2"
+      }
+    }
+
+    let(:config) do <<-CONFIG
+    filter {
+      geojson {
+        properties_dig_level => -1  
+      }
+    }
+    CONFIG
+    end
+    sample("properties" => props, "collisionKey" => "level 0") do
+      expect(subject).to include("collisionKey")
+      expect(subject).to include("collisionKey_level1")
+      expect(subject).to include("collisionKey_level2")
+      expect(subject['collisionKey']).to eq("level 0")
+      expect(subject['collisionKey_level1']).to eq("level 1")
+      expect(subject['collisionKey_level2']).to eq("level 2")
+    end
+  end
+
 end
