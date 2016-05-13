@@ -140,5 +140,29 @@ describe LogStash::Filters::GeoJSON do
       end
     end
 
+    describe "Un-nest GeoJSON properties (dig level infinate)" do
+      let(:config) do <<-CONFIG
+      filter {
+        geojson {
+          properties_dig_level => -1
+        }
+      }
+      CONFIG
+      end
+      sample("properties" => props) do
+        expect(subject).to include("stringProp")
+        expect(subject).to include("numProp")
+        expect(subject).not_to include("objProp")
+        expect(subject).to include("nestedStringProp")
+        expect(subject).to include("nestedNumProp")
+        expect(subject).to include("nested2StringProp")
+        expect(subject['stringProp']).to eq('some text')
+        expect(subject['numProp']).to eq(10)
+        expect(subject['nestedStringProp']).to eq('more text')
+        expect(subject['nestedNumProp']).to eq(10.1)
+        expect(subject['nested2StringProp']).to eq("really deep")
+      end
+    end
+
   end 
 end

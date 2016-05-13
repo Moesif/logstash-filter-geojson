@@ -55,8 +55,8 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def dig(k, v, level)
-    @logger.info("digging: key: " + k + ", value: " + v.to_s + ", type: " + v.class.to_s)
-    if (level > 0) && (v.is_a? Hash)
+    @logger.debug("flattening, remaining levels: " + level.to_s + ", key: " + k + ", value: " + v.to_s + ", type: " + v.class.to_s)
+    if (level != 0) && (v.is_a? Hash)
       nested = {}
       v.each do |nestedKey, nestedVal|
         nested = nested.merge(dig(nestedKey, nestedVal, level - 1))
@@ -71,6 +71,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
   def filter(event)
     if event["properties"] && properties_dig_level != 0
       props = dig("properties", event["properties"], properties_dig_level)
+      @logger.debug("flattened properties: " + props.to_s)
       props.each do |k, v|
         event[k] = v
       end
