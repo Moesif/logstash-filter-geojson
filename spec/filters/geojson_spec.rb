@@ -232,4 +232,37 @@ describe LogStash::Filters::GeoJSON do
   end
 =end
 
+  describe "Test properties_ignore_list config" do
+    props = {
+      "stringKey" => "ignore me", 
+      "numProp" => 10,
+      "objProp" => {
+        "nestedStringProp" => "ignore me",
+        "nestedNumProp" => 10.1,
+      },
+      "ignoreThisObj" => {
+        "anotherStringKey" => "ignore my parent"
+      }
+    }
+
+    let(:config) do <<-CONFIG
+    filter {
+      geojson {
+        properties_ignore_list => ["stringKey", "nestedStringProp", "ignoreThisObj"]
+        properties_dig_level => -1
+      }
+    }
+    CONFIG
+    end
+    sample("properties" => props) do
+      expect(subject).to include("numProp")
+      expect(subject).to include("nestedNumProp")
+      expect(subject).not_to include("stringKey")
+      expect(subject).not_to include("nestedStringProp")
+      expect(subject).not_to include("ignoreThisObj")
+      expect(subject['numProp']).to eq(10)
+      expect(subject['nestedNumProp']).to eq(10.1)
+    end
+  end
+
 end

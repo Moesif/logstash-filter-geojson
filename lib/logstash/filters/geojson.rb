@@ -11,6 +11,8 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   config :properties_dig_level, :validate => :number, :default => 1
 
+  config :properties_ignore_list, :validate => :array, :default => []
+
 
   public
   def register
@@ -60,9 +62,11 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       nested = {}
       allKeys = existingKeys.clone #keys passed in plus keys pulled from nested objects
       v.each do |nestedKey, nestedVal|
-        subNested = dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, allKeys)
-        allKeys = allKeys.concat(subNested.keys)
-        nested = nested.merge(subNested)
+        if !properties_ignore_list.include? nestedKey
+          subNested = dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, allKeys)
+          allKeys = allKeys.concat(subNested.keys)
+          nested = nested.merge(subNested)
+        end
       end
       return nested
     else
