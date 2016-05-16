@@ -24,6 +24,7 @@ describe LogStash::Filters::GeoJSON do
       sample("properties" => props) do
         expect(subject).to include("stringProp")
         expect(subject).to include("numProp")
+        expect(subject).not_to include("properties")
         expect(subject['stringProp']).to eq('some text')
         expect(subject['numProp']).to eq(10)
       end

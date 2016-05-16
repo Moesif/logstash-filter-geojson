@@ -4,6 +4,8 @@ require "logstash/namespace"
 
 # Filter to dig out GeoJSON fields for easier usage in ElasticStack.
 class LogStash::Filters::GeoJSON < LogStash::Filters::Base
+  PROPERTIES_KEY="properties"
+  GEOMETRY_KEY="geometry"
   GEOJSON_LAT_INDEX=1
   GEOGJSON_LON_INDEX=0
 
@@ -80,10 +82,10 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def filter(event)
-    if event["properties"] && properties_dig_level != 0
+    if event[PROPERTIES_KEY] && properties_dig_level != 0
       props = dig(
-        "properties", 
-        event["properties"], 
+        "props", 
+        event[PROPERTIES_KEY], 
         0,
         properties_dig_level,
         event.to_hash_with_metadata.keys)
@@ -91,10 +93,11 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       props.each do |k, v|
         event[k] = v
       end
+      event.remove(PROPERTIES_KEY)
     end
 
-    if event["geometry"]
-      event["point"] = convertToGeopoint(event["geometry"])
+    if event[GEOMETRY_KEY]
+      event["point"] = convertToGeopoint(event[GEOMETRY_KEY])
     end
     
     # filter_matched should go in the last line of our successful code
