@@ -168,8 +168,10 @@ describe LogStash::Filters::GeoJSON do
   describe "Test dig properties name collisions" do
     props = {
       "collisionKey" => "level 1", 
+      "anotherCollision" => "level 1",
       "objProp" => {
-        "collisionKey" => "level 2"
+        "collisionKey" => "level 2",
+        "anotherCollision" => "level 2"
       }
     }
 
@@ -184,10 +186,14 @@ describe LogStash::Filters::GeoJSON do
     sample("properties" => props, "collisionKey" => "level 0") do
       expect(subject).to include("collisionKey")
       expect(subject).to include("collisionKey_level1")
+      expect(subject).to include("anotherCollision")
       expect(subject).to include("collisionKey_level2")
+      expect(subject).to include("anotherCollision_level2")
       expect(subject['collisionKey']).to eq("level 0")
       expect(subject['collisionKey_level1']).to eq("level 1")
+      expect(subject['anotherCollision']).to eq("level 1")
       expect(subject['collisionKey_level2']).to eq("level 2")
+      expect(subject['anotherCollision_level2']).to eq("level 2")
     end
   end
 

@@ -58,8 +58,11 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     @logger.debug("flattening, remaining levels: " + digLevel.to_s + ", key: " + k + ", value: " + v.to_s + ", type: " + v.class.to_s)
     if (digLevel != 0) && (v.is_a? Hash)
       nested = {}
+      allKeys = existingKeys.clone #keys passed in plus keys pulled from nested objects
       v.each do |nestedKey, nestedVal|
-        nested = nested.merge(dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, existingKeys))
+        subNested = dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, allKeys)
+        allKeys = allKeys.concat(subNested.keys)
+        nested = nested.merge(subNested)
       end
       return nested
     else
