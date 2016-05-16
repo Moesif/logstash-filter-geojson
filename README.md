@@ -38,13 +38,20 @@ filter {
 
 ```
 {
-  "point": {
+  "centroid": {
     "lat" : 10.1,
     "lon" : 125.6
   },
   "name": "Dinagat Islands"
 }
 ```
+
+## Configuration Options
+| Configuration | Type | Default | Description |
+| ------------- |:----:|:-------:|:-----------:|
+| geometry_centroid_key | string | "centroid" | Specify event key containing geometry centroid  |
+| properties_dig_level | integer | 1 | Specify number of levels to flatten `properties`. Specify 0 to not flatten properties, -1 to flatten all levels |
+| properties_ignore_list | array of strings | [] | List of `properties` keys to ignore. Key will be ignored at all nested levels |
 
 ## Build instructions
 
