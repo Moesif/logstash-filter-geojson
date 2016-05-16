@@ -197,4 +197,39 @@ describe LogStash::Filters::GeoJSON do
     end
   end
 
+#sibling name collisions are going to be a problem and need a new algorithm
+#tackle this when it becomes a problem
+=begin
+  describe "Test dig properties sibling name collisions" do
+    props = {
+      "objProp1" => {
+        "siblingKey" => "from objProp1"
+      },
+      "objProp2" => {
+        "siblingKey" => "from objProp2"
+      },
+      "objProp3" => {
+        "siblingKey" => "from objProp3"
+      }
+    }
+
+    let(:config) do <<-CONFIG
+    filter {
+      geojson {
+        properties_dig_level => -1  
+      }
+    }
+    CONFIG
+    end
+    sample("properties" => props, "collisionKey" => "level 0") do
+      expect(subject).to include("siblingKey")
+      expect(subject).to include("siblingKey_2")
+      expect(subject).to include("siblingKey_3")
+      expect(subject['siblingKey']).to eq("from objProp1")
+      expect(subject['siblingKey_2']).to eq("from objProp2")
+      expect(subject['siblingKey_3']).to eq("from objProp3")
+    end
+  end
+=end
+
 end
