@@ -15,6 +15,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   config :properties_ignore_list, :validate => :array, :default => []
 
+  config :geometry_centroid_key, :validate => :string, :default => "centroid"
 
   public
   def register
@@ -64,7 +65,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       nested = {}
       allKeys = existingKeys.clone #keys passed in plus keys pulled from nested objects
       v.each do |nestedKey, nestedVal|
-        if !properties_ignore_list.include? nestedKey
+        if !@properties_ignore_list.include? nestedKey
           subNested = dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, allKeys)
           allKeys = allKeys.concat(subNested.keys)
           nested = nested.merge(subNested)
@@ -82,12 +83,12 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def filter(event)
-    if event[PROPERTIES_KEY] && properties_dig_level != 0
+    if event[PROPERTIES_KEY] && @properties_dig_level != 0
       props = dig(
         "props", 
         event[PROPERTIES_KEY], 
         0,
-        properties_dig_level,
+        @properties_dig_level,
         event.to_hash_with_metadata.keys)
       @logger.debug("flattened properties: " + props.to_s)
       props.each do |k, v|
@@ -97,7 +98,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     end
 
     if event[GEOMETRY_KEY]
-      event["point"] = convertToGeopoint(event[GEOMETRY_KEY])
+      event[@geometry_centroid_key] = convertToGeopoint(event[GEOMETRY_KEY])
     end
     
     # filter_matched should go in the last line of our successful code

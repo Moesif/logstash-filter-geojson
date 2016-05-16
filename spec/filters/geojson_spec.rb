@@ -33,8 +33,8 @@ describe LogStash::Filters::GeoJSON do
     describe "Convert GeoJSON Point to ElasticSearch geo_point" do
       geometry = {"type" => "Point", "coordinates" => [125.6, 10.1]}
       sample("geometry" => geometry) do
-        expect(subject).to include("point")
-        geoPoint = subject['point']
+        expect(subject).to include("centroid")
+        geoPoint = subject['centroid']
         expect(geoPoint).to include("lat")
         expect(geoPoint).to include("lon")
         expect(geoPoint['lat']).to eq(10.1)
@@ -45,8 +45,8 @@ describe LogStash::Filters::GeoJSON do
     describe "Convert GeoJSON LineString to ElasticSearch geo_point" do
       geometry = {"type" => "LineString", "coordinates" => [ [100.0, 0.0], [101.0, 1.0] ]}
       sample("geometry" => geometry) do
-        expect(subject).to include("point")
-        geoPoint = subject['point']
+        expect(subject).to include("centroid")
+        geoPoint = subject['centroid']
         expect(geoPoint).to include("lat")
         expect(geoPoint).to include("lon")
         expect(geoPoint['lat']).to eq(0.5)
@@ -59,8 +59,8 @@ describe LogStash::Filters::GeoJSON do
         [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ]
         ]}
       sample("geometry" => geometry) do
-        expect(subject).to include("point")
-        geoPoint = subject['point']
+        expect(subject).to include("centroid")
+        geoPoint = subject['centroid']
         expect(geoPoint).to include("lat")
         expect(geoPoint).to include("lon")
         expect(geoPoint['lat']).to eq(0.5)
@@ -263,6 +263,21 @@ describe LogStash::Filters::GeoJSON do
       expect(subject).not_to include("ignoreThisObj")
       expect(subject['numProp']).to eq(10)
       expect(subject['nestedNumProp']).to eq(10.1)
+    end
+  end
+
+  describe "Test geometry_centroid_key config" do
+    let(:config) do <<-CONFIG
+    filter {
+      geojson {
+        geometry_centroid_key => "myCentroid"
+      }
+    }
+    CONFIG
+    end
+    geometry = {"type" => "Point", "coordinates" => [125.6, 10.1]}
+    sample("geometry" => geometry) do
+      expect(subject).to include("myCentroid")
     end
   end
 
