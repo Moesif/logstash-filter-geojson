@@ -30,7 +30,7 @@ describe LogStash::Filters::GeoJSON do
       end
     end
 
-    describe "Convert GeoJSON Point to ElasticSearch geo_point" do
+    describe "Point geometry" do
       geometry = {"type" => "Point", "coordinates" => [125.6, 10.1]}
       sample("geometry" => geometry) do
         expect(subject).to include("centroid")
@@ -42,7 +42,7 @@ describe LogStash::Filters::GeoJSON do
       end
     end
 
-    describe "Convert GeoJSON LineString to ElasticSearch geo_point" do
+    describe "LineString geometry" do
       geometry = {"type" => "LineString", "coordinates" => [ [100.0, 0.0], [101.0, 1.0] ]}
       sample("geometry" => geometry) do
         expect(subject).to include("centroid")
@@ -54,7 +54,7 @@ describe LogStash::Filters::GeoJSON do
       end
     end
 
-    describe "Convert GeoJSON Polygon to ElasticSearch geo_point" do
+    describe "Polygon geometry" do
       geometry = {"type" => "Polygon", "coordinates" => [
         [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ]
         ]}
@@ -67,6 +67,26 @@ describe LogStash::Filters::GeoJSON do
         expect(geoPoint['lon']).to eq(100.5)
       end
     end
+
+    describe "MultiPoint geometry" do
+      geometry = {
+        "type" => "MultiPoint", 
+        "coordinates" => [ [100.0, 0.0], [101.0, 1.0] ]
+      }
+      sample("geometry" => geometry) do
+        expect(subject).to include("centroid")
+        geoPoint = subject['centroid']
+        expect(geoPoint.length).to eq(2)
+        expect(geoPoint[0]['lat']).to eq(0.0)
+        expect(geoPoint[0]['lon']).to eq(100.0)
+        expect(geoPoint[1]['lat']).to eq(1.0)
+        expect(geoPoint[1]['lon']).to eq(101.0)
+      end
+    end
+
+    { "type": "MultiPoint",
+    "coordinates": [ [100.0, 0.0], [101.0, 1.0] ]
+    }
   end
 
   describe "Test properties_dig_level config" do

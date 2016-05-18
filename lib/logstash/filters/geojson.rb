@@ -42,20 +42,30 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def convertToGeopoint(geometry)
-    point = nil
+    centroid = nil
     if "Point".casecmp(geometry["type"]) == 0
-      point = {
+      centroid = {
         "lat" => geometry["coordinates"][GEOJSON_LAT_INDEX], 
         "lon" => geometry["coordinates"][GEOGJSON_LON_INDEX]
       }
     elsif "LineString".casecmp(geometry["type"]) == 0
-      point = getCenter(geometry["coordinates"])
+      centroid = getCenter(geometry["coordinates"])
     elsif "Polygon".casecmp(geometry["type"]) == 0
       exteriorRing = geometry["coordinates"][0]
       #remove last point because it just closes shape and skews center
-      point = getCenter(exteriorRing[0...-1])
+      centroid = getCenter(exteriorRing[0...-1])
+    elsif "MultiPoint".casecmp(geometry["type"]) == 0
+      centroid = []
+      geometry["coordinates"].each do |it|
+        centroid.push({
+        "lat" => it[GEOJSON_LAT_INDEX], 
+        "lon" => it[GEOGJSON_LON_INDEX]
+        })
+      end
+    else
+      @logger.debug("unexpected geometry: " + geometry["type"])
     end
-    return point
+    return centroid
   end
 
   public
