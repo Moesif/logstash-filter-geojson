@@ -19,7 +19,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def register
-    # Add instance variables 
+    @ignoreSet = @properties_ignore_list.to_set
   end # def register
 
   #Coords is an array of lon, lat pairs
@@ -75,7 +75,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       nested = {}
       allKeys = existingKeys.clone #keys passed in plus keys pulled from nested objects
       v.each do |nestedKey, nestedVal|
-        if !@properties_ignore_list.include? nestedKey
+        if !@ignoreSet.include? nestedKey
           subNested = dig(nestedKey, nestedVal, nestLevel+1, digLevel - 1, allKeys)
           allKeys = allKeys.concat(subNested.keys)
           nested = nested.merge(subNested)
