@@ -84,9 +84,25 @@ describe LogStash::Filters::GeoJSON do
       end
     end
 
-    { "type": "MultiPoint",
-    "coordinates": [ [100.0, 0.0], [101.0, 1.0] ]
-    }
+    describe "MultiPolygon geometry" do
+      geometry = {
+        "type" => "MultiPolygon", 
+        "coordinates" => [
+          [[[100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ]],
+          [[[100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ]]
+        ]
+      }
+      sample("geometry" => geometry) do
+        expect(subject).to include("centroid")
+        geoPoint = subject['centroid']
+        expect(geoPoint.length).to eq(2)
+        expect(geoPoint[0]['lat']).to eq(0.5)
+        expect(geoPoint[0]['lon']).to eq(100.5)
+        expect(geoPoint[1]['lat']).to eq(0.5)
+        expect(geoPoint[1]['lon']).to eq(100.5)
+      end
+    end
+
   end
 
   describe "Test properties_dig_level config" do

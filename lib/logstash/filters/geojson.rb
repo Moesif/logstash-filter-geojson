@@ -58,12 +58,18 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       centroid = []
       geometry["coordinates"].each do |it|
         centroid.push({
-        "lat" => it[GEOJSON_LAT_INDEX], 
-        "lon" => it[GEOGJSON_LON_INDEX]
+          "lat" => it[GEOJSON_LAT_INDEX], 
+          "lon" => it[GEOGJSON_LON_INDEX]
         })
       end
+    elsif "MultiPolygon".casecmp(geometry["type"]) == 0
+      centroid = []
+      geometry["coordinates"].each do |it|
+        exteriorRing = it[0]
+        centroid.push(getCenter(exteriorRing[0...-1]))
+      end
     else
-      @logger.debug("unexpected geometry: " + geometry["type"])
+      @logger.warn("unexpected geometry: " + geometry["type"])
     end
     return centroid
   end
