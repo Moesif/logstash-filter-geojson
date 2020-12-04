@@ -1,6 +1,8 @@
 # encoding: utf-8
 require "logstash/filters/base"
 require "logstash/namespace"
+require "offline_geocoder"
+
 
 # Filter to dig out GeoJSON fields for easier usage in ElasticStack.
 class LogStash::Filters::GeoJSON < LogStash::Filters::Base
@@ -12,6 +14,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
   public
   def register
+    @geocoder = OfflineGeocoder.new
   end # def register
 
   #Coords is an array of lon, lat pairs
@@ -82,7 +85,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
 
           # Check if the content type is application/json and body is of type Hash or Array (Json)
           if !content_type.nil? && (content_type.include? 'application/json') && (fetched_body.is_a? Hash or fetched_body.is_a? Array)
-            parse_json_body(event, fetched_body, geo_fields, parsed_body_field, org_id, app_id)
+            parse_json_body(event, fetched_body, parsed_body_field, org_id, app_id)
           else
             # Set the parsed body object to empty hash
             @logger.debug('geoJsonParser: Content-type is not json so setting to empty array for orgId - ' << org_id << ' and appId - ' << app_id)
@@ -90,7 +93,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
           end
         elsif (fetched_body.is_a? Hash && !fetched_body.key?('_raw')) || (fetched_body.is_a? Array)
           @logger.debug('geoJsonParser: Content-type header is not availabe and body is of type JSON so parsing body as JSON for orgId - ' << org_id << ' and appId - ' << app_id)
-          parse_json_body(event, fetched_body, geo_fields, parsed_body_field, org_id, app_id)
+          parse_json_body(event, fetched_body, parsed_body_field, org_id, app_id)
         else
           @logger.debug('geoJsonParser: Content-type header is not available and body is not of type JSON so setting to empty array for orgId - ' << org_id << ' and appId - ' << app_id)
           event.set(parsed_body_field, geo_fields)
@@ -106,62 +109,91 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     end
   end
 
+
+  # Function to parse query params
+  def parse_query_params(event, input_field, output_field, org_id, app_id)
+    begin
+      # Empty hash to store geo fields
+      geo_fields = Hash.new
+      input_query_params = event.get(input_field)
+      if !input_query_params.nil?
+        parse_json_body(event, input_query_params, output_field, org_id, app_id)
+      else
+        # query params is empty
+        @logger.debug('geoJsonParser: Query params fetched from the event is empty for orgId - ' << org_id << ' and appId - ' << app_id)
+        event.set(output_field, geo_fields)
+      end
+    rescue StandardError => e
+      @logger.warn('geoJsonParser: error processing Query params for orgId - ' << org_id << ' and appId - ' << app_id << ' with exception - ', exception: e)
+      event.set(output_field, Hash.new)
+    end
+  end
+
   # Function to parse json body
-  def parse_json_body(event, body, geo_fields, parsed_body_field, org_id, app_id)
+  def parse_json_body(event, body, parsed_body_field, org_id, app_id)
     begin
       # Process the JSON body
-      process_body(body, geo_fields, org_id, app_id)
-      event.set(parsed_body_field, geo_fields)
+      result = process_body(body, org_id, app_id)
+      if !result
+        result = Hash.new
+      end
+      event.set(parsed_body_field, result)
     rescue => e
       @logger.warn('geoJsonParser: error parsing JSON body for orgId - ' << org_id << ' and appId - ' << app_id << ' with exception - ', exception: e)
-      event.set(parsed_body_field,  geo_fields)
+      event.set(parsed_body_field,  Hash.new)
     end
   end
 
   # Function to process body
-  def process_body(body, geo_fields, org_id, app_id)
+  def process_body(body, org_id, app_id)
     @logger.debug('geoJsonParser: process body data for orgId - ' << org_id << ' and appId - ' << app_id)
     # extract the geo fields
-    extract_geo_fields(body, geo_fields)
+    result =  extract_geo_fields(body)
+    return result
   end
 
   # Function to extract geo fields
-  def extract_geo_fields(data, prefix= "", geo_fields)
+  def extract_geo_fields(data, prefix= "")
+    geo_data = nil
     # Add dot(.) to prefix in case of nested hash
-    prefixDot = !(prefix.empty? || prefix.nil?) ? prefix + '.' : ''
+    prefixDot = !(prefix.nil? || prefix.empty?) ? prefix + '.' : ''
     # Check if the data is of type hash
     if data.is_a? Hash
-      geo_point = extract_geo_point(data)
-      add_to_geo_fields(geo_point, geo_fields)
-      data.each do |key, value|
+      geo_data = Hash.new
+      geo_point, key = extract_geo_point(data)
+      if geo_point
+        geo_data_internal = @geocoder.search(geo_point["lat"], geo_point["lon"])
+        if !geo_data_internal
+           geo_data_internal = Hash.new
+        end
+        geo_data_internal["geo_point"] = geo_point
         if key
-          sub_hash = Hash.new
-          extract_geo_fields(value, prefixDot + key.to_s, sub_hash)
-          if !sub_hash.empty? && key
-            geo_fields[key.to_s] = sub_hash
-          end
+          geo_data[key.to_s] = geo_data_internal
+        else
+          geo_data = geo_data_internal
+        end
+      end
+      data.each do |key, value|
+        geo_data_sub_key = extract_geo_fields(value, prefixDot + key.to_s)
+        if geo_data_sub_key && !geo_data_sub_key.empty?
+            geo_data[key.to_s] = geo_data_sub_key
         end
       end
     # Check if the data is of type array
     elsif data.is_a? Array
+      geo_data = []
       # For each element in data, recursive function to find the leaf node
-      data.each { |item| extract_geo_fields(item, prefixDot, geo_fields)}
+      data.each do |item|
+        geo_data_sub_element = extract_geo_fields(item, prefixDot)
+        if geo_data_sub_element
+          geo_data.push(geo_data_sub_element)
+        end
+      end
     end
-  end
-
-
-  def add_to_geo_fields(geo_point, geo_fields)
-    if !geo_point
-      return
+    if geo_data && geo_data.empty?
+       geo_data = nil
     end
-    key = "geo_point"
-    if geo_fields.key?(key) && (geo_fields[key].is_a? Array)
-      geo_fields[key].push(geo_point)
-    elsif geo_fields.key?(key)
-      geo_fields[key] = [geo_fields[key], geo_point]
-    else
-      geo_fields[key] = geo_point
-    end
+    return geo_data
   end
 
   def extract_geo_point(input)
@@ -169,38 +201,38 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     input.transform_keys!(&:downcase)
     # check for geometry
     if input.key?("type") && input.key?("coordinates")
-      return convertToGeopoint(input)
+      return convertToGeopoint(input), nil
     # check for lat/lon
     elsif input.key?("lat") && input.key?("lon")
-      return parse_lat_lon_from_array([input["lat"], input["lon"]])
+      return parse_lat_lon_from_array([input["lat"], input["lon"]]), nil
     # check for latitude/longitude
     elsif input.key?("latitude") && input.key?("longitude")
-      return parse_lat_lon_from_array([input["latitude"], input["longitude"]])
+      return parse_lat_lon_from_array([input["latitude"], input["longitude"]]), nil
     # check for lat/lng
     elsif input.key?("lat") && input.key?("lng")
-      return parse_lat_lon_from_array([input["lat"], input["lng"]])
+      return parse_lat_lon_from_array([input["lat"], input["lng"]]), nil
     elsif input.key?("location")
-      return parse_lat_lon(input["location"])
+      return parse_lat_lon(input["location"]), "location"
     elsif input.key?("latlng")
-      return parse_lat_lon(input["latlng"])
+      return parse_lat_lon(input["latlng"]), "latlng"
     elsif input.key?("coordinates")
-      return parse_lat_lon(input["coordinates"])
+      return parse_lat_lon(input["coordinates"]), "coordinates"
     elsif input.key?("position")
-      return parse_lat_lon(input["position"])
+      return parse_lat_lon(input["position"]), "position"
     else
       input.each do |key, value|
         if key.start_with?("geo")
           point = parse_lat_lon(value)
           if point
-            return point
+            return point, key
           end
         end
       end
     end
-    return nil
+    return nil, nil
   rescue StandardError => e
     @logger.warn('geoJsonParser: unable to extract geo_point', data: input, exception: e)
-    return nil
+    return nil, nil
   end
 
   def parse_lat_lon(input)
@@ -253,6 +285,9 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     # Response Body
     @logger.debug('geoJsonParser: Begin parsing response body for orgId - ' << org_id << ' and appId - ' << app_id)
     parse_body(event, "[response]",  "[response][body]", "[response][geo_fields][body]", org_id, app_id)
+    # Request Query params
+    @logger.debug('geoJsonParser: Begin parsing for request query params for orgId - ' << org_id << ' and appId - ' << app_id)
+    parse_query_params(event, "[request][query]", "[request][geo_fields][query]", org_id, app_id)
     # Filter match event
     filter_matched(event)
   rescue StandardError => e
