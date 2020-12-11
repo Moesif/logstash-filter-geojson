@@ -84,14 +84,14 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
           @logger.debug('geoJsonParser: Content type -  ', content: content_type)
 
           # Check if the content type is application/json and body is of type Hash or Array (Json)
-          if !content_type.nil? && (content_type.include? 'application/json') && (fetched_body.is_a? Hash or fetched_body.is_a? Array)
+          if !content_type.nil? && (content_type.include? 'application/json') && (fetched_body.is_a? (Hash) or fetched_body.is_a? (Array))
             parse_json_body(event, fetched_body, parsed_body_field, org_id, app_id)
           else
             # Set the parsed body object to empty hash
             @logger.debug('geoJsonParser: Content-type is not json so setting to empty array for orgId - ' << org_id << ' and appId - ' << app_id)
             event.set(parsed_body_field, geo_fields)
           end
-        elsif (fetched_body.is_a? Hash && !fetched_body.key?('_raw')) || (fetched_body.is_a? Array)
+        elsif (fetched_body.is_a?(Hash) && !fetched_body.key?('_raw')) || fetched_body.is_a?(Array)
           @logger.debug('geoJsonParser: Content-type header is not availabe and body is of type JSON so parsing body as JSON for orgId - ' << org_id << ' and appId - ' << app_id)
           parse_json_body(event, fetched_body, parsed_body_field, org_id, app_id)
         else
@@ -158,7 +158,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
     # Add dot(.) to prefix in case of nested hash
     prefixDot = !(prefix.nil? || prefix.empty?) ? prefix + '.' : ''
     # Check if the data is of type hash
-    if data.is_a? Hash
+    if data.is_a? (Hash)
       geo_data = Hash.new
       geo_point, key = extract_geo_point(data)
       if geo_point
@@ -180,7 +180,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
         end
       end
     # Check if the data is of type array
-    elsif data.is_a? Array
+    elsif data.is_a? (Array)
       geo_data = []
       # For each element in data, recursive function to find the leaf node
       data.each do |item|
@@ -236,7 +236,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
   end
 
   def parse_lat_lon(input)
-    if input.is_a? String
+    if input.is_a? (String)
       str_point = nil
       if input.start_with?("POINT")
        str_point = input.scan(/POINT\(([^>]*)\)/).last.first
@@ -245,7 +245,7 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       end
       coords = str_point.split(",")
       return parse_lat_lon_from_array(coords)
-    elsif input.is_a? Array
+    elsif input.is_a? (Array)
       return parse_lat_lon_from_array(input)
     end
   end
@@ -259,12 +259,12 @@ class LogStash::Filters::GeoJSON < LogStash::Filters::Base
       return nil
     end
     point = nil
-    if (input[0].is_a? Numeric) && (input[1].is_a? Numeric)
+    if (input[0].is_a? (Numeric)) && (input[1].is_a? (Numeric))
       point = {
         "lat" => input[0],
         "lon" => input[1]
       }
-    elsif (input[0].is_a? String) && (input[1].is_a? String) && valid_float(input[0]) && valid_float(input[1])
+    elsif (input[0].is_a?(String)) && (input[1].is_a? (String)) && valid_float(input[0]) && valid_float(input[1])
       point = {
         "lat" => input[0].to_f,
         "lon" => input[1].to_f
